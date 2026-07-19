@@ -1,26 +1,41 @@
-# Order Book Matching Engine
+# Java Limit Order Book Matching Engine
 
-A Java implementation of an in-memory limit order book matching engine that follows **price-time priority** for matching BUY and SELL limit orders.
+A production-oriented Java implementation of an in-memory limit order book matching engine that follows **price-time priority** for matching BUY and SELL limit orders.
 
-The goal of this project is to understand the core algorithms and data structures behind modern electronic exchanges by implementing the matching engine from scratch without external dependencies.
+The goal of this project is to understand how modern electronic exchanges work by implementing the core matching engine from scratch while learning backend engineering, data structures, clean architecture, and system design.
+
+---
 
 ## Features
 
-* Limit order support
-* Price-time priority matching
-* FIFO ordering within each price level
-* Partial order fills
-* Complete order fills
-* Automatic removal of fully executed orders
-* Trade generation for every successful match
-* In-memory implementation using Java collections
+### Implemented
+
+- ✅ BUY and SELL limit orders
+- ✅ Price-time priority matching
+- ✅ FIFO execution within each price level
+- ✅ Partial order fills
+- ✅ Full order fills
+- ✅ Order cancellation
+- ✅ Order lookup by ID
+- ✅ Trade generation
+- ✅ Trade history
+- ✅ Trade metadata
+    - Buy Order ID
+    - Sell Order ID
+    - Execution timestamp
+- ✅ Order types
+    - LIMIT
+    - MARKET *(model introduced, execution coming next)*
+- ✅ JUnit 5 test suite
+
+---
 
 ## Matching Rules
 
 ### Price Priority
 
-* BUY orders match the **lowest available SELL price**.
-* SELL orders match the **highest available BUY price**.
+- BUY orders match the **lowest available SELL price**.
+- SELL orders match the **highest available BUY price**.
 
 Example:
 
@@ -35,11 +50,11 @@ Execution:
 
 ```
 BUY 60
-├── matches SELL 50 @ 100
-└── matches SELL 10 @ 101
+├── 50 @ 100
+└── 10 @ 101
 ```
 
-Remaining order book:
+Remaining book:
 
 ```
 SELL 20 @ 101
@@ -49,7 +64,7 @@ SELL 20 @ 101
 
 ### Time Priority (FIFO)
 
-Orders at the same price are matched in the order they were received.
+Orders at the same price level are matched in the order they were received.
 
 Example:
 
@@ -64,146 +79,268 @@ BUY 35 @ 100
 Execution:
 
 ```
-SELL 20 -> fully executed
-SELL 30 -> partially executed (15 remaining)
-SELL 40 -> untouched
+SELL 20 -> Fully Executed
+SELL 30 -> Partially Executed (15 remaining)
+SELL 40 -> Unchanged
 ```
 
-Remaining book:
+Remaining:
 
 ```
 SELL 15 @ 100
 SELL 40 @ 100
 ```
 
-## Data Structures
+---
 
-```text
-BUY Book
-TreeMap<Double, Queue<Order>>
-        ↓
-Highest Price
-        ↓
-FIFO Queue
-
-SELL Book
-TreeMap<Double, Queue<Order>>
-        ↓
-Lowest Price
-        ↓
-FIFO Queue
-```
-
-* `TreeMap` maintains price levels in sorted order.
-* BUY orders use a reverse-order `TreeMap`.
-* SELL orders use a natural-order `TreeMap`.
-* Each price level stores a FIFO `Queue<Order>` to preserve time priority.
-
-## Project Structure
+## Architecture
 
 ```
-src/
-├── Main.java
-├── Order.java
-├── OrderBook.java
-├── Side.java
-└── Trade.java
+        Main
+          │
+          ▼
+   MatchingEngine
+          │
+          ▼
+      OrderBook
 ```
 
-### Order
+### MatchingEngine
 
-Represents a limit order.
+Responsible for:
 
-Fields:
-
-* Side (BUY / SELL)
-* Quantity
-* Price
-
-### Trade
-
-Represents a completed trade.
-
-Fields:
-
-* Price
-* Quantity
+- Processing incoming orders
+- Executing matches
+- Applying price-time priority
+- Creating trades
 
 ### OrderBook
 
 Responsible for:
 
-* Maintaining BUY and SELL books
-* Matching incoming orders
-* Updating quantities
-* Removing completed orders
-* Generating trades
+- Maintaining BUY and SELL books
+- Managing price levels
+- Order lookup
+- Order cancellation
+- Trade history
 
-## Complexity
+---
 
-| Operation                |    Complexity |
-| ------------------------ | ------------: |
-| Add Order                |      O(log n) |
-| Best Bid / Ask Lookup    |          O(1) |
-| Match Against Best Order | O(1) per fill |
-| Remove Empty Price Level |      O(log n) |
+## Data Structures
 
-Where *n* is the number of price levels in the order book.
+```text
+TreeMap<Double, Queue<Order>> bidBook
+TreeMap<Double, Queue<Order>> askBook
+
+HashMap<Long, Order> orderIndex
+
+ArrayList<Trade> trades
+```
+
+### Why these structures?
+
+**TreeMap**
+
+- Maintains sorted price levels
+- BUY book uses reverse ordering
+- SELL book uses natural ordering
+
+**Queue**
+
+- Preserves FIFO execution within a price level
+
+**HashMap**
+
+- Enables O(1) average order lookup by ID
+
+**ArrayList**
+
+- Stores execution history
+
+---
+
+## Project Structure
+
+```
+src/
+├── main/
+│   └── java/
+│       └── orderbook/
+│           ├── Main.java
+│           ├── MatchingEngine.java
+│           ├── Order.java
+│           ├── OrderBook.java
+│           ├── OrderType.java
+│           ├── Side.java
+│           └── Trade.java
+│
+└── test/
+    └── java/
+        └── orderbook/
+            └── MatchingEngineTest.java
+```
+
+---
+
+## Domain Model
+
+### Order
+
+Represents an incoming order.
+
+Fields:
+
+- Order ID
+- Side (BUY / SELL)
+- Quantity
+- Price
+- Order Type
+
+---
+
+### Trade
+
+Represents a completed execution.
+
+Fields:
+
+- Buy Order ID
+- Sell Order ID
+- Execution Price
+- Executed Quantity
+- Execution Timestamp
+
+---
+
+## Time Complexity
+
+| Operation | Complexity |
+|-----------|-----------:|
+| Add Order | O(log n) |
+| Cancel Order | O(1) average |
+| Best Bid Lookup | O(1) |
+| Best Ask Lookup | O(1) |
+| Match Best Order | O(1) per fill |
+| Remove Empty Price Level | O(log n) |
+
+Where **n** is the number of price levels.
+
+---
 
 ## Example
 
 ```java
 OrderBook orderBook = new OrderBook();
+MatchingEngine engine = new MatchingEngine(orderBook);
 
-orderBook.processOrder(new Order(Side.SELL, 20, 100));
-orderBook.processOrder(new Order(Side.SELL, 30, 100));
-orderBook.processOrder(new Order(Side.BUY, 35, 100));
+engine.processOrder(
+    new Order(
+        1,
+        Side.SELL,
+        20,
+        100.0,
+        OrderType.LIMIT
+    )
+);
 
-orderBook.printOrderBook();
+engine.processOrder(
+    new Order(
+        2,
+        Side.BUY,
+        20,
+        100.0,
+        OrderType.LIMIT
+    )
+);
+
+orderBook.printTrades();
 ```
 
-Output:
+Example output:
 
 ```
-TRADE -> Quantity: 20, Price: 100.0
-TRADE -> Quantity: 15, Price: 100.0
-
-Side | Quantity | Price
-SELL | 15 | 100.0
+TRADE
+Buy Order : 2
+Sell Order: 1
+Quantity  : 20
+Price     : 100.0
 ```
 
-## Current Limitations
+---
 
-This project currently supports:
+## Testing
 
-* Limit orders only
-* Single-threaded execution
-* In-memory order book
+The project uses **JUnit 5**.
 
-The following features are planned:
+Current test coverage includes:
 
-* Order IDs
-* Order cancellation
-* Order modification
-* Market orders
-* JUnit test suite
-* Performance benchmarking
-* Concurrent matching engine
-* REST API
-* Persistence
-* WebSocket market data streaming
+- Single order insertion
+- Full order match
+- Partial fill
+- FIFO execution
+- Order cancellation
+- No-match scenarios
+- Trade generation
 
-## Learning Goals
+Run tests with:
+
+```bash
+mvn test
+```
+
+---
+
+## Roadmap
+
+### Matching Engine
+
+- [x] Limit orders
+- [x] FIFO matching
+- [x] Partial fills
+- [x] Order cancellation
+- [x] Trade history
+- [x] Order types
+- [ ] Market order execution
+- [ ] IOC orders
+- [ ] FOK orders
+
+### Performance
+
+- [ ] Benchmarking
+- [ ] JMH benchmarks
+- [ ] Throughput analysis
+- [ ] Latency measurements
+
+### Backend
+
+- [ ] Spring Boot REST API
+- [ ] WebSocket market data
+- [ ] PostgreSQL persistence
+- [ ] Docker support
+
+### Documentation
+
+- [ ] Architecture diagrams
+- [ ] Performance report
+- [ ] Design decisions
+- [ ] Benchmark results
+
+---
+
+## Learning Objectives
 
 This project focuses on understanding:
 
-* Price-time priority matching
-* Efficient data structures for order books
-* Queue-based scheduling (FIFO)
-* Partial fill handling
-* Trade generation
-* Matching engine design
+- Matching engine algorithms
+- Price-time priority
+- Exchange order books
+- Efficient in-memory data structures
+- Object-oriented design
+- Clean architecture
+- Unit testing
+- Backend engineering
+- System design
 
-## License
+---
 
 This project is intended for educational purposes and experimentation with exchange matching engine concepts.
