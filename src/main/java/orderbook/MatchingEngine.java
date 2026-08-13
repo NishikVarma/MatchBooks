@@ -8,7 +8,7 @@ public class MatchingEngine {
         this.orderBook = orderBook;
     }
 
-    Trade executeMatch(Order incomingOrder, Order existingOrder){
+    Trade executeMatch(LimitOrder incomingOrder, LimitOrder existingOrder){
         long buyOrderId;
         long sellOrderId;
         int incomingQuantity = incomingOrder.getQuantity();
@@ -31,9 +31,9 @@ public class MatchingEngine {
         return new Trade(existingOrder.getPrice(), tradeQuantity, buyOrderId, sellOrderId, timestamp);
     }
 
-    void processBuyOrder(Order incomingOrder){
+    void processBuyOrder(LimitOrder incomingOrder){
         while(incomingOrder.getQuantity() > 0 && orderBook.canBuyOrderMatch(incomingOrder)){
-            Order bestAsk = orderBook.getBestAskOrder();
+            LimitOrder bestAsk = orderBook.getBestAskOrder();
 
             Trade trade = executeMatch(incomingOrder, bestAsk);
             orderBook.recordTrade(trade);
@@ -48,9 +48,9 @@ public class MatchingEngine {
         }
     }
 
-    void processSellOrder(Order incomingOrder){
+    void processSellOrder(LimitOrder incomingOrder){
         while(incomingOrder.getQuantity() > 0 && orderBook.canSellOrderMatch(incomingOrder)){
-            Order bestBid = orderBook.getBestBidOrder();
+            LimitOrder bestBid = orderBook.getBestBidOrder();
 
             Trade trade = executeMatch(incomingOrder, bestBid);
             orderBook.recordTrade(trade);
@@ -65,7 +65,7 @@ public class MatchingEngine {
         }
     }
 
-    public void processOrder(Order order){
+    public void processOrder(LimitOrder order){
         if(order.getSide() == Side.BUY){
             processBuyOrder(order);
         }else{

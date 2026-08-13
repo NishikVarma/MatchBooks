@@ -1,17 +1,15 @@
 package orderbook;
 
-public class Order{
+public abstract class Order{
     private final long id;
-    private Side side;
+    private final Side side;
     private int quantity;
-    private double price;
-    private OrderType orderType;
+    private final OrderType orderType;
 
-    public Order(long id, Side side, int quantity, double price, OrderType orderType){
+    public Order(long id, Side side, int quantity, OrderType orderType){
         this.id = id;
         this.side = side;
         this.quantity = quantity;
-        this.price = price;
         this.orderType = orderType;
     }
 
@@ -25,10 +23,6 @@ public class Order{
 
     public int getQuantity(){
         return quantity;
-    }
-
-    public double getPrice() {
-        return price;
     }
 
     public OrderType getOrderType() {

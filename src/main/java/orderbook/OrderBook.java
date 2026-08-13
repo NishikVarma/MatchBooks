@@ -3,8 +3,8 @@ package orderbook;
 import java.util.*;
 
 public class OrderBook {
-    private final TreeMap<Double, Queue<Order>> bidOffers;
-    private final TreeMap<Double, Queue<Order>> askOffers;
+    private final TreeMap<Double, Queue<LimitOrder>> bidOffers;
+    private final TreeMap<Double, Queue<LimitOrder>> askOffers;
     private final Map<Long, Order> orderIndex = new HashMap<>();
     private final List<Trade> trades = new ArrayList<>();
 
@@ -13,11 +13,11 @@ public class OrderBook {
         askOffers = new TreeMap<>();
     }
 
-    void addOrder(Order order){
+    void addOrder(LimitOrder order){
         Side side = order.getSide();
         double price = order.getPrice();
         orderIndex.put(order.getId(), order);
-        TreeMap<Double, Queue<Order>> book;
+        TreeMap<Double, Queue<LimitOrder>> book;
 
         if(side == Side.BUY){
             book = bidOffers;
@@ -25,10 +25,7 @@ public class OrderBook {
             book = askOffers;
         }
 
-        if(!book.containsKey(price)){
-            book.put(price, new LinkedList<>());
-        }
-
+        book.computeIfAbsent(price, p -> new LinkedList<>());
         book.get(price).offer(order);
     }
 
@@ -40,21 +37,21 @@ public class OrderBook {
         return askOffers.isEmpty() ? 0.0 : askOffers.firstKey();
     }
 
-    boolean canBuyOrderMatch(Order order){
+    boolean canBuyOrderMatch(LimitOrder order){
         return !askOffers.isEmpty() && order.getPrice() >= getBestAsk();
     }
 
-    boolean canSellOrderMatch(Order order){
+    boolean canSellOrderMatch(LimitOrder order){
         return !bidOffers.isEmpty() && order.getPrice() <= getBestBid();
     }
 
-    public Order getBestBidOrder(){
+    public LimitOrder getBestBidOrder(){
         if(bidOffers.isEmpty()) return null;
 
         return bidOffers.firstEntry().getValue().peek();
     }
 
-    public Order getBestAskOrder(){
+    public LimitOrder getBestAskOrder(){
         if(askOffers.isEmpty()) return null;
 
         return askOffers.firstEntry().getValue().peek();
@@ -68,11 +65,11 @@ public class OrderBook {
         removeBestOrder(askOffers);
     }
 
-    private void removeBestOrder(TreeMap<Double, Queue<Order>> book){
+    private void removeBestOrder(TreeMap<Double, Queue<LimitOrder>> book){
         double bestPrice = book.firstKey();
-        Queue<Order> ordersAtBestPrice = book.get(bestPrice);
+        Queue<LimitOrder> ordersAtBestPrice = book.get(bestPrice);
 
-        Order order = ordersAtBestPrice.peek();
+        LimitOrder order = ordersAtBestPrice.peek();
         if(order.getQuantity() == 0){
             orderIndex.remove(order.getId());
             ordersAtBestPrice.poll();
@@ -86,19 +83,21 @@ public class OrderBook {
         Order order = orderIndex.get(id);
 
         if(order == null) return;
+        if(order.getOrderType() != OrderType.LIMIT) return;
 
-        TreeMap<Double, Queue<Order>> book;
+        LimitOrder limitOrder = (LimitOrder) order;
 
+        TreeMap<Double, Queue<LimitOrder>> book;
         if(order.getSide() == Side.BUY){
             book = bidOffers;
         }else{
             book = askOffers;
         }
 
-        Queue<Order> orders = book.get(order.getPrice());
+        Queue<LimitOrder> orders = book.get(limitOrder.getPrice());
         orders.remove(order);
         if(orders.isEmpty()){
-            book.remove(order.getPrice());
+            book.remove(limitOrder.getPrice());
         }
 
         orderIndex.remove(id);
@@ -110,14 +109,14 @@ public class OrderBook {
 
     public void printOrderBook(){
         System.out.println("main.java.orderbook.Side | Quantity | Price");
-        for(Map.Entry<Double, Queue<Order>> bidOrder : bidOffers.entrySet()){
-            for(Order order : bidOrder.getValue()){
+        for(Map.Entry<Double, Queue<LimitOrder>> bidOrder : bidOffers.entrySet()){
+            for(LimitOrder order : bidOrder.getValue()){
                 System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + bidOrder.getKey());
             }
         }
 
-        for(Map.Entry<Double, Queue<Order>> askOrder : askOffers.entrySet()){
-            for(Order order : askOrder.getValue()){
+        for(Map.Entry<Double, Queue<LimitOrder>> askOrder : askOffers.entrySet()){
+            for(LimitOrder order : askOrder.getValue()){
                 System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + askOrder.getKey());
             }
         }

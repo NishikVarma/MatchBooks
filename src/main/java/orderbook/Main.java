@@ -6,11 +6,11 @@ public class Main {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.SELL, 20, 100, OrderType.LIMIT));
-        engine.processOrder(new Order(2, Side.SELL, 30, 100, OrderType.LIMIT));
-        engine.processOrder(new Order(3, Side.SELL, 40, 101, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 30, 100));
+        engine.processOrder(new LimitOrder(3, Side.SELL, 40, 101));
 
-        engine.processOrder(new Order(4, Side.BUY, 60, 101, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(4, Side.BUY, 60, 101));
 
         orderBook.printOrderBook();
         orderBook.printTrades();

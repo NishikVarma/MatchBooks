@@ -11,7 +11,7 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.BUY, 100, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 100, 10.0));
 
         assertEquals(10.0, orderBook.getBestBid());
         assertEquals(0.0, orderBook.getBestAsk());
@@ -24,8 +24,8 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.SELL, 100, 10.0, OrderType.LIMIT));
-        engine.processOrder(new Order(2, Side.BUY, 100, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 100, 10.0));
+        engine.processOrder(new LimitOrder(2, Side.BUY, 100, 10.0));
 
         assertEquals(0.0, orderBook.getBestBid());
         assertEquals(0.0, orderBook.getBestAsk());
@@ -43,8 +43,8 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.SELL, 200, 10.0, OrderType.LIMIT));
-        engine.processOrder(new Order(2, Side.BUY, 75, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 200, 10.0));
+        engine.processOrder(new LimitOrder(2, Side.BUY, 75, 10.0));
 
         assertNotNull(orderBook.getBestAskOrder());
         assertEquals(125, orderBook.getBestAskOrder().getQuantity());
@@ -58,8 +58,8 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.BUY, 100, 9.5, OrderType.LIMIT));
-        engine.processOrder(new Order(2, Side.SELL, 100, 10.5, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 100, 9.5));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 100, 10.5));
 
         assertEquals(9.5, orderBook.getBestBid());
         assertEquals(10.5, orderBook.getBestAsk());
@@ -72,10 +72,10 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.SELL, 100, 10.0, OrderType.LIMIT));
-        engine.processOrder(new Order(2, Side.SELL, 100, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 100, 10.0));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 100, 10.0));
 
-        engine.processOrder(new Order(3, Side.BUY, 150, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(3, Side.BUY, 150, 10.0));
 
         assertEquals(50, orderBook.getBestAskOrder().getQuantity());
 
@@ -90,7 +90,7 @@ public class MatchingEngineTest {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
-        engine.processOrder(new Order(1, Side.BUY, 100, 10.0, OrderType.LIMIT));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 100, 10.0));
 
         orderBook.cancelOrder(1);
 
@@ -100,7 +100,7 @@ public class MatchingEngineTest {
 
     @Test
     void testOrderTypeIsStored() {
-        Order order = new Order(1, Side.BUY, 100, 10.0, OrderType.LIMIT);
+        Order order = new LimitOrder(1, Side.BUY, 100, 10.0);
 
         assertEquals(OrderType.LIMIT, order.getOrderType());
     }
