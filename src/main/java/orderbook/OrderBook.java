@@ -37,12 +37,20 @@ public class OrderBook {
         return askOffers.isEmpty() ? 0.0 : askOffers.firstKey();
     }
 
-    boolean canBuyOrderMatch(LimitOrder order){
-        return !askOffers.isEmpty() && order.getPrice() >= getBestAsk();
+    boolean canBuyOrderMatch(Order order){
+        if(order.isMarketOrder()){
+            return !askOffers.isEmpty();
+        }
+
+        return !askOffers.isEmpty() && ((LimitOrder) order).getPrice() >= getBestAsk();
     }
 
-    boolean canSellOrderMatch(LimitOrder order){
-        return !bidOffers.isEmpty() && order.getPrice() <= getBestBid();
+    boolean canSellOrderMatch(Order order){
+        if(order.isMarketOrder()){
+            return !bidOffers.isEmpty();
+        }
+
+        return !bidOffers.isEmpty() && ((LimitOrder) order).getPrice() <= getBestBid();
     }
 
     public LimitOrder getBestBidOrder(){

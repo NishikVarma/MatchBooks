@@ -8,30 +8,50 @@ public class MatchingEngine {
         this.orderBook = orderBook;
     }
 
-    Trade executeMatch(LimitOrder incomingOrder, LimitOrder existingOrder){
+    Trade executeMatch(Order incomingOrder, LimitOrder existingOrder) {
+
         long buyOrderId;
         long sellOrderId;
+
         int incomingQuantity = incomingOrder.getQuantity();
         int existingQuantity = existingOrder.getQuantity();
 
         int tradeQuantity = Math.min(incomingQuantity, existingQuantity);
+
         incomingOrder.setQuantity(incomingQuantity - tradeQuantity);
         existingOrder.setQuantity(existingQuantity - tradeQuantity);
 
         final Instant timestamp = Instant.now();
 
         if (incomingOrder.getSide() == Side.BUY) {
+
             buyOrderId = incomingOrder.getId();
             sellOrderId = existingOrder.getId();
+
         } else {
+
             buyOrderId = existingOrder.getId();
             sellOrderId = incomingOrder.getId();
         }
 
-        return new Trade(existingOrder.getPrice(), tradeQuantity, buyOrderId, sellOrderId, timestamp);
+        return new Trade(
+                existingOrder.getPrice(),
+                tradeQuantity,
+                buyOrderId,
+                sellOrderId,
+                timestamp
+        );
     }
 
-    void processBuyOrder(LimitOrder incomingOrder){
+    public void processOrder(Order order) {
+        if (order.getSide() == Side.BUY) {
+            processBuyOrder(order);
+        } else {
+            processSellOrder(order);
+        }
+    }
+
+    void processBuyOrder(Order incomingOrder){
         while(incomingOrder.getQuantity() > 0 && orderBook.canBuyOrderMatch(incomingOrder)){
             LimitOrder bestAsk = orderBook.getBestAskOrder();
 
@@ -43,12 +63,13 @@ public class MatchingEngine {
             }
         }
 
-        if(incomingOrder.getQuantity() > 0){
-            orderBook.addOrder(incomingOrder);
+        if(incomingOrder.isLimitOrder() && incomingOrder.getQuantity() > 0){
+            LimitOrder limitOrder = (LimitOrder) incomingOrder;
+            orderBook.addOrder(limitOrder);
         }
     }
 
-    void processSellOrder(LimitOrder incomingOrder){
+    void processSellOrder(Order incomingOrder){
         while(incomingOrder.getQuantity() > 0 && orderBook.canSellOrderMatch(incomingOrder)){
             LimitOrder bestBid = orderBook.getBestBidOrder();
 
@@ -60,16 +81,9 @@ public class MatchingEngine {
             }
         }
 
-        if(incomingOrder.getQuantity() > 0){
-            orderBook.addOrder(incomingOrder);
-        }
-    }
-
-    public void processOrder(LimitOrder order){
-        if(order.getSide() == Side.BUY){
-            processBuyOrder(order);
-        }else{
-            processSellOrder(order);
+        if(incomingOrder.isLimitOrder() && incomingOrder.getQuantity() > 0){
+            LimitOrder limitOrder = (LimitOrder) incomingOrder;
+            orderBook.addOrder(limitOrder);
         }
     }
 }
