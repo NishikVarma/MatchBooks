@@ -3,150 +3,70 @@ package orderbook;
 import java.util.*;
 
 public class OrderBook {
-    private final TreeMap<Double, Queue<LimitOrder>> bidOffers;
-    private final TreeMap<Double, Queue<LimitOrder>> askOffers;
-    private final Map<Long, Order> orderIndex = new HashMap<>();
+    private final BookSide bids = new BookSide(Side.BUY);
+    private final BookSide asks = new BookSide(Side.SELL);
+    private final Map<Long, LimitOrder> orderIndex = new HashMap<>();
     private final List<Trade> trades = new ArrayList<>();
 
-    public OrderBook(){
-        bidOffers = new TreeMap<>(Comparator.reverseOrder());
-        askOffers = new TreeMap<>();
+    BookSide sideFor(Side side){
+        return side == Side.BUY ? bids : asks;
+    }
+
+    BookSide opposite(Side side){
+        return side == Side.BUY ? asks : bids;
     }
 
     void addOrder(LimitOrder order){
-        Side side = order.getSide();
-        double price = order.getPrice();
+        sideFor(order.getSide()).add(order);
         orderIndex.put(order.getId(), order);
-        TreeMap<Double, Queue<LimitOrder>> book;
+    }
 
-        if(side == Side.BUY){
-            book = bidOffers;
-        }else{
-            book = askOffers;
-        }
+    /** Removes a resting order (fully filled or cancelled) from the book and the index. */
+    void removeOrder(LimitOrder order){
+        sideFor(order.getSide()).remove(order);
+        orderIndex.remove(order.getId());
+    }
 
-        book.computeIfAbsent(price, p -> new LinkedList<>());
-        book.get(price).offer(order);
+    /** Lowers the remaining quantity of a resting order, keeping level totals correct. */
+    void reduceResting(LimitOrder order, int quantity){
+        order.level.reduce(order, quantity);
     }
 
     boolean hasOrder(long id){
         return orderIndex.containsKey(id);
     }
 
+    LimitOrder findOrder(long id){
+        return orderIndex.get(id);
+    }
+
+    /**
+     * Cancels a resting order. O(1), plus O(log P) when it was the last order at its price.
+     *
+     * @return true if an order was cancelled, false if the id is not resting
+     */
+    public boolean cancelOrder(long id){
+        LimitOrder order = orderIndex.get(id);
+        if(order == null) return false;
+
+        removeOrder(order);
+        return true;
+    }
+
     public double getBestBid(){
-        return bidOffers.isEmpty() ? 0.0 : bidOffers.firstKey();
+        return bids.isEmpty() ? 0.0 : bids.bestLevel().price();
     }
 
     public double getBestAsk(){
-        return askOffers.isEmpty() ? 0.0 : askOffers.firstKey();
-    }
-
-    boolean canBuyOrderMatch(Order order){
-        if(order.isMarketOrder()){
-            return !askOffers.isEmpty();
-        }
-
-        return !askOffers.isEmpty() && ((LimitOrder) order).getPrice() >= getBestAsk();
-    }
-
-    boolean canSellOrderMatch(Order order){
-        if(order.isMarketOrder()){
-            return !bidOffers.isEmpty();
-        }
-
-        return !bidOffers.isEmpty() && ((LimitOrder) order).getPrice() <= getBestBid();
+        return asks.isEmpty() ? 0.0 : asks.bestLevel().price();
     }
 
     public LimitOrder getBestBidOrder(){
-        if(bidOffers.isEmpty()) return null;
-
-        return bidOffers.firstEntry().getValue().peek();
+        return bids.bestOrder();
     }
 
     public LimitOrder getBestAskOrder(){
-        if(askOffers.isEmpty()) return null;
-
-        return askOffers.firstEntry().getValue().peek();
-    }
-
-    void removeBestBidOrder(){
-        removeBestOrder(bidOffers);
-    }
-
-    void removeBestAskOrder(){
-        removeBestOrder(askOffers);
-    }
-
-    private void removeBestOrder(TreeMap<Double, Queue<LimitOrder>> book){
-        double bestPrice = book.firstKey();
-        Queue<LimitOrder> ordersAtBestPrice = book.get(bestPrice);
-
-        LimitOrder order = ordersAtBestPrice.peek();
-        if(order.getQuantity() == 0){
-            orderIndex.remove(order.getId());
-            ordersAtBestPrice.poll();
-            if(ordersAtBestPrice.isEmpty()){
-                book.remove(bestPrice);
-            }
-        }
-    }
-
-    public void cancelOrder(long id){
-        Order order = orderIndex.get(id);
-
-        if(order == null) return;
-        if(order.getOrderType() != OrderType.LIMIT) return;
-
-        LimitOrder limitOrder = (LimitOrder) order;
-
-        TreeMap<Double, Queue<LimitOrder>> book;
-        if(order.getSide() == Side.BUY){
-            book = bidOffers;
-        }else{
-            book = askOffers;
-        }
-
-        Queue<LimitOrder> orders = book.get(limitOrder.getPrice());
-        orders.remove(order);
-        if(orders.isEmpty()){
-            book.remove(limitOrder.getPrice());
-        }
-
-        orderIndex.remove(id);
-    }
-
-    boolean canBuyOrderFill(Order incomingOrder){
-        int totalQuantity = 0;
-
-        for(Map.Entry<Double, Queue<LimitOrder>> entry : askOffers.entrySet()){
-            if(incomingOrder.isLimitOrder() && entry.getKey() > ((LimitOrder) incomingOrder).getPrice()) break;
-            for(LimitOrder limitOrder : entry.getValue()){
-                totalQuantity += limitOrder.getQuantity();
-
-                if(totalQuantity >= incomingOrder.getQuantity()){
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    boolean canSellOrderFill(Order incomingOrder){
-        int totalQuantity = 0;
-
-        for(Map.Entry<Double, Queue<LimitOrder>> entry : bidOffers.entrySet()){
-            if(incomingOrder.isLimitOrder() && entry.getKey() < ((LimitOrder) incomingOrder).getPrice()) break;
-            for(LimitOrder limitOrder : entry.getValue()){
-                totalQuantity += limitOrder.getQuantity();
-
-                if(totalQuantity >= incomingOrder.getQuantity()){
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return asks.bestOrder();
     }
 
     void recordTrade(Trade trade){
@@ -154,16 +74,15 @@ public class OrderBook {
     }
 
     public void printOrderBook(){
-        System.out.println("main.java.orderbook.Side | Quantity | Price");
-        for(Map.Entry<Double, Queue<LimitOrder>> bidOrder : bidOffers.entrySet()){
-            for(LimitOrder order : bidOrder.getValue()){
-                System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + bidOrder.getKey());
-            }
-        }
+        System.out.println("Side | Quantity | Price");
+        printSide(bids);
+        printSide(asks);
+    }
 
-        for(Map.Entry<Double, Queue<LimitOrder>> askOrder : askOffers.entrySet()){
-            for(LimitOrder order : askOrder.getValue()){
-                System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + askOrder.getKey());
+    private void printSide(BookSide side){
+        for(PriceLevel level : side.levels()){
+            for(LimitOrder order = level.head(); order != null; order = order.next){
+                System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + level.price());
             }
         }
     }

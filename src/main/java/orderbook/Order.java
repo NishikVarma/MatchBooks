@@ -36,8 +36,9 @@ public abstract class Order {
         return orderType;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    /** Only the engine and the price level change quantities (ADR-0030). */
+    void reduceQuantity(int by) {
+        this.quantity -= by;
     }
 
     public boolean isLimitOrder() {

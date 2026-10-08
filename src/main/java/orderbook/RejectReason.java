@@ -9,5 +9,6 @@ public enum RejectReason {
     INVALID_TIME_IN_FORCE,
     INVALID_QUANTITY,
     INVALID_PRICE,
-    DUPLICATE_ID
+    DUPLICATE_ID,
+    UNKNOWN_ORDER
 }

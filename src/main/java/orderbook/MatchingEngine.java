@@ -16,13 +16,10 @@ public class MatchingEngine {
         long buyOrderId;
         long sellOrderId;
 
-        int incomingQuantity = incomingOrder.getQuantity();
-        int existingQuantity = existingOrder.getQuantity();
+        int tradeQuantity = Math.min(incomingOrder.getQuantity(), existingOrder.getQuantity());
 
-        int tradeQuantity = Math.min(incomingQuantity, existingQuantity);
-
-        incomingOrder.setQuantity(incomingQuantity - tradeQuantity);
-        existingOrder.setQuantity(existingQuantity - tradeQuantity);
+        incomingOrder.reduceQuantity(tradeQuantity);
+        orderBook.reduceResting(existingOrder, tradeQuantity);
 
         final Instant timestamp = Instant.now();
 
@@ -63,13 +60,9 @@ public class MatchingEngine {
         }
 
         List<Trade> trades = new ArrayList<>();
-        boolean rested;
 
-        if (order.getSide() == Side.BUY) {
-            rested = processBuyOrder(order, trades);
-        } else {
-            rested = processSellOrder(order, trades);
-        }
+        match(order, trades);
+        boolean rested = restRemainder(order);
 
         int remaining = order.getQuantity();
         OrderStatus status;
@@ -82,6 +75,37 @@ public class MatchingEngine {
         }
 
         return new ExecutionResult(status, submittedQuantity - remaining, remaining, trades, null);
+    }
+
+    /** @return true if a resting order with this id was cancelled */
+    public boolean cancelOrder(long id){
+        return orderBook.cancelOrder(id);
+    }
+
+    /**
+     * Amends a resting order (ADR-0031). Reducing the quantity at the same price keeps
+     * time priority; any other change cancels the order and resubmits it at the back
+     * of the line, where it may trade immediately.
+     */
+    public ExecutionResult replaceOrder(long id, int newQuantity, double newPrice){
+        LimitOrder resting = orderBook.findOrder(id);
+        if(resting == null){
+            return ExecutionResult.rejected(newQuantity, RejectReason.UNKNOWN_ORDER);
+        }
+        if(newQuantity <= 0){
+            return ExecutionResult.rejected(newQuantity, RejectReason.INVALID_QUANTITY);
+        }
+        if(!Double.isFinite(newPrice) || newPrice <= 0){
+            return ExecutionResult.rejected(newQuantity, RejectReason.INVALID_PRICE);
+        }
+
+        if(newPrice == resting.getPrice() && newQuantity <= resting.getQuantity()){
+            orderBook.reduceResting(resting, resting.getQuantity() - newQuantity);
+            return new ExecutionResult(OrderStatus.RESTING, 0, newQuantity, List.of(), null);
+        }
+
+        orderBook.cancelOrder(id);
+        return processOrder(new LimitOrder(id, resting.getSide(), newQuantity, newPrice, TimeInForce.GTC));
     }
 
     private RejectReason validate(Order order){
@@ -100,38 +124,21 @@ public class MatchingEngine {
         return null;
     }
 
-    /** @return true if the unfilled remainder was placed in the book */
-    boolean processBuyOrder(Order incomingOrder, List<Trade> trades){
-        while(incomingOrder.getQuantity() > 0 && orderBook.canBuyOrderMatch(incomingOrder)){
-            LimitOrder bestAsk = orderBook.getBestAskOrder();
+    /** One matching loop for both sides (ADR-0028): hit the opposite side while prices cross. */
+    private void match(Order incomingOrder, List<Trade> trades){
+        BookSide opposite = orderBook.opposite(incomingOrder.getSide());
 
-            Trade trade = executeMatch(incomingOrder, bestAsk);
+        while(incomingOrder.getQuantity() > 0 && opposite.crossedBy(incomingOrder)){
+            LimitOrder resting = opposite.bestOrder();
+
+            Trade trade = executeMatch(incomingOrder, resting);
             orderBook.recordTrade(trade);
             trades.add(trade);
 
-            if(bestAsk.getQuantity() == 0){
-                orderBook.removeBestAskOrder();
+            if(resting.getQuantity() == 0){
+                orderBook.removeOrder(resting);
             }
         }
-
-        return restRemainder(incomingOrder);
-    }
-
-    /** @return true if the unfilled remainder was placed in the book */
-    boolean processSellOrder(Order incomingOrder, List<Trade> trades){
-        while(incomingOrder.getQuantity() > 0 && orderBook.canSellOrderMatch(incomingOrder)){
-            LimitOrder bestBid = orderBook.getBestBidOrder();
-
-            Trade trade = executeMatch(incomingOrder, bestBid);
-            orderBook.recordTrade(trade);
-            trades.add(trade);
-
-            if(bestBid.getQuantity() == 0){
-                orderBook.removeBestBidOrder();
-            }
-        }
-
-        return restRemainder(incomingOrder);
     }
 
     private boolean restRemainder(Order order){
@@ -143,10 +150,6 @@ public class MatchingEngine {
     }
 
     private boolean orderFillable(Order order){
-        if(order.getSide() == Side.BUY){
-            return orderBook.canBuyOrderFill(order);
-        }else{
-            return orderBook.canSellOrderFill(order);
-        }
+        return orderBook.opposite(order.getSide()).canFill(order);
     }
 }
