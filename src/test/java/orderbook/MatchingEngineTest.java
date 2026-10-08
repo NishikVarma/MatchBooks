@@ -232,7 +232,7 @@ public class MatchingEngineTest {
     }
 
     @Test
-    void testIOCPairialFill() {
+    void testIOCPartialFill() {
         OrderBook orderBook = new OrderBook();
         MatchingEngine engine = new MatchingEngine(orderBook);
 
