@@ -7,6 +7,16 @@ public class OrderBook {
     private final BookSide asks = new BookSide(Side.SELL);
     private final Map<Long, LimitOrder> orderIndex = new HashMap<>();
     private final List<Trade> trades = new ArrayList<>();
+    private final PriceScale priceScale;
+
+    public OrderBook(){
+        this(PriceScale.TICKS);
+    }
+
+    /** @param priceScale used only to print prices; matching works on raw ticks (ADR-0032) */
+    public OrderBook(PriceScale priceScale){
+        this.priceScale = priceScale;
+    }
 
     BookSide sideFor(Side side){
         return side == Side.BUY ? bids : asks;
@@ -53,12 +63,24 @@ public class OrderBook {
         return true;
     }
 
-    public double getBestBid(){
-        return bids.isEmpty() ? 0.0 : bids.bestLevel().price();
+    public boolean hasBid(){
+        return !bids.isEmpty();
     }
 
-    public double getBestAsk(){
-        return asks.isEmpty() ? 0.0 : asks.bestLevel().price();
+    public boolean hasAsk(){
+        return !asks.isEmpty();
+    }
+
+    /** @throws NoSuchElementException if there are no bids (check {@link #hasBid()}) */
+    public long bestBid(){
+        if(bids.isEmpty()) throw new NoSuchElementException("no bids");
+        return bids.bestLevel().price();
+    }
+
+    /** @throws NoSuchElementException if there are no asks (check {@link #hasAsk()}) */
+    public long bestAsk(){
+        if(asks.isEmpty()) throw new NoSuchElementException("no asks");
+        return asks.bestLevel().price();
     }
 
     public LimitOrder getBestBidOrder(){
@@ -91,7 +113,7 @@ public class OrderBook {
         if(trades.isEmpty()) return;
 
         for(Trade trade : trades){
-            System.out.println("TRADE -> Quantity: " + trade.getQuantity() + ", Price: " + trade.getPrice());
+            System.out.println("TRADE -> Quantity: " + trade.getQuantity() + ", Price: " + priceScale.format(trade.getPrice()));
         }
     }
 

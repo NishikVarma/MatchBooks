@@ -21,8 +21,8 @@ class TimeInForceRulesTest {
 
     @Test
     void marketFokBuyFillsAcrossLevelsWhenEnoughLiquidity() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
-        engine.processOrder(new LimitOrder(2, Side.SELL, 30, 150.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 30, 150));
 
         ExecutionResult result =
                 engine.processOrder(new MarketOrder(3, Side.BUY, 50, TimeInForce.FOK));
@@ -34,7 +34,7 @@ class TimeInForceRulesTest {
 
     @Test
     void marketFokBuyIsKilledWhenLiquidityIsShort() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100));
 
         ExecutionResult result =
                 engine.processOrder(new MarketOrder(2, Side.BUY, 50, TimeInForce.FOK));
@@ -48,7 +48,7 @@ class TimeInForceRulesTest {
 
     @Test
     void marketFokSellFillsAndIsKilledSymmetrically() {
-        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100));
 
         ExecutionResult killed =
                 engine.processOrder(new MarketOrder(2, Side.SELL, 30, TimeInForce.FOK));
@@ -84,10 +84,10 @@ class TimeInForceRulesTest {
 
     @Test
     void sellIocFillsWhatCrossesAndDiscardsTheRest() {
-        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(2, Side.SELL, 50, 100.0, TimeInForce.IOC));
+                engine.processOrder(new LimitOrder(2, Side.SELL, 50, 100, TimeInForce.IOC));
 
         assertEquals(OrderStatus.CANCELLED, result.status());
         assertEquals(20, result.filledQuantity());
@@ -97,10 +97,10 @@ class TimeInForceRulesTest {
 
     @Test
     void sellIocThatDoesNotCrossLeavesNothingBehind() {
-        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 99.0));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 99));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(2, Side.SELL, 10, 100.0, TimeInForce.IOC));
+                engine.processOrder(new LimitOrder(2, Side.SELL, 10, 100, TimeInForce.IOC));
 
         assertEquals(OrderStatus.CANCELLED, result.status());
         assertEquals(0, result.filledQuantity());
@@ -109,28 +109,28 @@ class TimeInForceRulesTest {
 
     @Test
     void sellFokRespectsLimitPriceAndQuantity() {
-        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100.0));
-        engine.processOrder(new LimitOrder(2, Side.BUY, 30, 98.0));
+        engine.processOrder(new LimitOrder(1, Side.BUY, 20, 100));
+        engine.processOrder(new LimitOrder(2, Side.BUY, 30, 98));
 
         ExecutionResult tooFar =
-                engine.processOrder(new LimitOrder(3, Side.SELL, 50, 99.0, TimeInForce.FOK));
+                engine.processOrder(new LimitOrder(3, Side.SELL, 50, 99, TimeInForce.FOK));
         assertEquals(OrderStatus.CANCELLED, tooFar.status());
         assertTrue(orderBook.getTrades().isEmpty());
 
         ExecutionResult ok =
-                engine.processOrder(new LimitOrder(4, Side.SELL, 50, 98.0, TimeInForce.FOK));
+                engine.processOrder(new LimitOrder(4, Side.SELL, 50, 98, TimeInForce.FOK));
         assertEquals(OrderStatus.FILLED, ok.status());
         assertEquals(2, ok.trades().size());
     }
 
     @Test
     void fokCountsQuantityAcrossSeveralOrdersAtOneLevel() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 10, 100.0));
-        engine.processOrder(new LimitOrder(2, Side.SELL, 10, 100.0));
-        engine.processOrder(new LimitOrder(3, Side.SELL, 10, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 10, 100));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 10, 100));
+        engine.processOrder(new LimitOrder(3, Side.SELL, 10, 100));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(4, Side.BUY, 25, 100.0, TimeInForce.FOK));
+                engine.processOrder(new LimitOrder(4, Side.BUY, 25, 100, TimeInForce.FOK));
 
         assertEquals(OrderStatus.FILLED, result.status());
         assertEquals(5, orderBook.getBestAskOrder().getQuantity());

@@ -11,7 +11,7 @@ import java.util.TreeMap;
 final class BookSide {
 
     private final Side side;
-    private final TreeMap<Double, PriceLevel> levels;
+    private final TreeMap<Long, PriceLevel> levels;
     private PriceLevel best;
 
     BookSide(Side side) {
@@ -40,7 +40,7 @@ final class BookSide {
 
     /** Rests the order at the back of its price level, creating the level if needed. */
     void add(LimitOrder order) {
-        double price = order.getPrice();
+        long price = order.getPrice();
         PriceLevel level = levels.get(price);
 
         if (level == null) {
@@ -91,15 +91,15 @@ final class BookSide {
         return false;
     }
 
-    private boolean acceptable(double levelPrice, Order incoming) {
+    private boolean acceptable(long levelPrice, Order incoming) {
         if (incoming.isMarketOrder()) return true;
 
-        double limit = ((LimitOrder) incoming).getPrice();
+        long limit = ((LimitOrder) incoming).getPrice();
         // this side is the one being hit: asks are hit by buyers, bids by sellers
         return side == Side.SELL ? limit >= levelPrice : limit <= levelPrice;
     }
 
-    private boolean isBetter(double candidate, double current) {
+    private boolean isBetter(long candidate, long current) {
         return side == Side.BUY ? candidate > current : candidate < current;
     }
 }

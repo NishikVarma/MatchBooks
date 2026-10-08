@@ -10,17 +10,17 @@ package orderbook;
  */
 final class PriceLevel {
 
-    private final double price;
+    private final long price;
     private LimitOrder head;
     private LimitOrder tail;
     private int orderCount;
     private long totalQuantity;
 
-    PriceLevel(double price) {
+    PriceLevel(long price) {
         this.price = price;
     }
 
-    double price() {
+    long price() {
         return price;
     }
 

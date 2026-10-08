@@ -36,7 +36,7 @@ public class MatchingEngineBenchmark {
                                 i,
                                 Side.SELL,
                                 100,
-                                100.0 + i
+                                100 + i
                         )
                 );
             }

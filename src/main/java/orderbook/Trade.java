@@ -2,13 +2,13 @@ package orderbook;
 import java.time.Instant;
 
 public class Trade {
-    private final double price;
+    private final long price;
     private final int quantity;
     private final long buyOrderId;
     private final long sellOrderId;
     private final Instant timestamp;
 
-    Trade(double price, int quantity, long buyOrderId, long sellOrderId, Instant timestamp){
+    Trade(long price, int quantity, long buyOrderId, long sellOrderId, Instant timestamp){
         this.price = price;
         this.quantity = quantity;
         this.buyOrderId = buyOrderId;
@@ -16,7 +16,7 @@ public class Trade {
         this.timestamp = timestamp;
     }
 
-    public double getPrice() {
+    public long getPrice() {
         return price;
     }
 

@@ -87,7 +87,7 @@ public class MatchingEngine {
      * time priority; any other change cancels the order and resubmits it at the back
      * of the line, where it may trade immediately.
      */
-    public ExecutionResult replaceOrder(long id, int newQuantity, double newPrice){
+    public ExecutionResult replaceOrder(long id, int newQuantity, long newPrice){
         LimitOrder resting = orderBook.findOrder(id);
         if(resting == null){
             return ExecutionResult.rejected(newQuantity, RejectReason.UNKNOWN_ORDER);
@@ -95,7 +95,7 @@ public class MatchingEngine {
         if(newQuantity <= 0){
             return ExecutionResult.rejected(newQuantity, RejectReason.INVALID_QUANTITY);
         }
-        if(!Double.isFinite(newPrice) || newPrice <= 0){
+        if(newPrice <= 0){
             return ExecutionResult.rejected(newQuantity, RejectReason.INVALID_PRICE);
         }
 
@@ -115,8 +115,7 @@ public class MatchingEngine {
         if(order.getQuantity() <= 0) return RejectReason.INVALID_QUANTITY;
 
         if(order.isLimitOrder()){
-            double price = ((LimitOrder) order).getPrice();
-            if(!Double.isFinite(price) || price <= 0) return RejectReason.INVALID_PRICE;
+            if(((LimitOrder) order).getPrice() <= 0) return RejectReason.INVALID_PRICE;
         }
 
         if(orderBook.hasOrder(order.getId())) return RejectReason.DUPLICATE_ID;

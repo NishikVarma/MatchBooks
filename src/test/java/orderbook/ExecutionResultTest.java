@@ -20,7 +20,7 @@ class ExecutionResultTest {
 
     @Test
     void restingOrderWithNoTradesIsResting() {
-        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.BUY, 10, 100.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.BUY, 10, 100));
 
         assertEquals(OrderStatus.RESTING, result.status());
         assertEquals(0, result.filledQuantity());
@@ -31,9 +31,9 @@ class ExecutionResultTest {
 
     @Test
     void fullFillIsFilled() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 10, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 10, 100));
 
-        ExecutionResult result = engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100));
 
         assertEquals(OrderStatus.FILLED, result.status());
         assertEquals(10, result.filledQuantity());
@@ -43,9 +43,9 @@ class ExecutionResultTest {
 
     @Test
     void partialFillOfGtcOrderRestsTheRemainder() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100));
 
-        ExecutionResult result = engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100));
 
         assertEquals(OrderStatus.RESTING, result.status());
         assertEquals(4, result.filledQuantity());
@@ -55,10 +55,10 @@ class ExecutionResultTest {
 
     @Test
     void partialFillOfIocOrderIsCancelledAndReportsTheDiscardedQuantity() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100.0, TimeInForce.IOC));
+                engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100, TimeInForce.IOC));
 
         assertEquals(OrderStatus.CANCELLED, result.status());
         assertEquals(4, result.filledQuantity());
@@ -77,10 +77,10 @@ class ExecutionResultTest {
 
     @Test
     void killedFokOrderIsCancelledWithNothingFilled() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100.0, TimeInForce.FOK));
+                engine.processOrder(new LimitOrder(2, Side.BUY, 10, 100, TimeInForce.FOK));
 
         assertEquals(OrderStatus.CANCELLED, result.status());
         assertEquals(0, result.filledQuantity());
@@ -91,11 +91,11 @@ class ExecutionResultTest {
 
     @Test
     void fokOrderThatCanFillIsFilled() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100.0));
-        engine.processOrder(new LimitOrder(2, Side.SELL, 6, 101.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 4, 100));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 6, 101));
 
         ExecutionResult result =
-                engine.processOrder(new LimitOrder(3, Side.BUY, 10, 101.0, TimeInForce.FOK));
+                engine.processOrder(new LimitOrder(3, Side.BUY, 10, 101, TimeInForce.FOK));
 
         assertEquals(OrderStatus.FILLED, result.status());
         assertEquals(2, result.trades().size());
@@ -103,24 +103,24 @@ class ExecutionResultTest {
 
     @Test
     void resultContainsOnlyThisOrdersTradesInExecutionOrder() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100.0));
-        engine.processOrder(new LimitOrder(2, Side.BUY, 5, 100.0));      // earlier trade
-        engine.processOrder(new LimitOrder(3, Side.SELL, 5, 100.0));
-        engine.processOrder(new LimitOrder(4, Side.SELL, 5, 101.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100));
+        engine.processOrder(new LimitOrder(2, Side.BUY, 5, 100));      // earlier trade
+        engine.processOrder(new LimitOrder(3, Side.SELL, 5, 100));
+        engine.processOrder(new LimitOrder(4, Side.SELL, 5, 101));
 
         ExecutionResult result = engine.processOrder(new MarketOrder(5, Side.BUY, 8));
 
         assertEquals(2, result.trades().size());
-        assertEquals(100.0, result.trades().get(0).getPrice());
+        assertEquals(100, result.trades().get(0).getPrice());
         assertEquals(5, result.trades().get(0).getQuantity());
-        assertEquals(101.0, result.trades().get(1).getPrice());
+        assertEquals(101, result.trades().get(1).getPrice());
         assertEquals(3, result.trades().get(1).getQuantity());
         assertEquals(3, orderBook.getTrades().size());                   // history has all three
     }
 
     @Test
     void resultTradeListCannotBeModified() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100));
         ExecutionResult result = engine.processOrder(new MarketOrder(2, Side.BUY, 5));
 
         assertThrows(UnsupportedOperationException.class, () -> result.trades().clear());
@@ -131,7 +131,7 @@ class ExecutionResultTest {
     @Test
     void zeroQuantityIsRejected() {
         assertRejected(RejectReason.INVALID_QUANTITY,
-                engine.processOrder(new LimitOrder(1, Side.BUY, 0, 100.0)));
+                engine.processOrder(new LimitOrder(1, Side.BUY, 0, 100)));
     }
 
     @Test
@@ -141,21 +141,17 @@ class ExecutionResultTest {
     }
 
     @Test
-    void nonPositiveOrNonFinitePriceIsRejected() {
+    void nonPositivePriceIsRejected() {
         assertRejected(RejectReason.INVALID_PRICE,
-                engine.processOrder(new LimitOrder(1, Side.BUY, 10, 0.0)));
+                engine.processOrder(new LimitOrder(1, Side.BUY, 10, 0)));
         assertRejected(RejectReason.INVALID_PRICE,
-                engine.processOrder(new LimitOrder(2, Side.BUY, 10, -1.0)));
-        assertRejected(RejectReason.INVALID_PRICE,
-                engine.processOrder(new LimitOrder(3, Side.BUY, 10, Double.NaN)));
-        assertRejected(RejectReason.INVALID_PRICE,
-                engine.processOrder(new LimitOrder(4, Side.SELL, 10, Double.POSITIVE_INFINITY)));
+                engine.processOrder(new LimitOrder(2, Side.BUY, 10, -1)));
     }
 
     @Test
     void missingTimeInForceIsRejected() {
         assertRejected(RejectReason.MISSING_TIME_IN_FORCE,
-                engine.processOrder(new LimitOrder(1, Side.BUY, 10, 100.0, null)));
+                engine.processOrder(new LimitOrder(1, Side.BUY, 10, 100, null)));
         assertRejected(RejectReason.MISSING_TIME_IN_FORCE,
                 engine.processOrder(new MarketOrder(2, Side.BUY, 10, null)));
     }
@@ -163,12 +159,12 @@ class ExecutionResultTest {
     @Test
     void missingSideIsRejected() {
         assertRejected(RejectReason.INVALID_SIDE,
-                engine.processOrder(new LimitOrder(1, null, 10, 100.0)));
+                engine.processOrder(new LimitOrder(1, null, 10, 100)));
     }
 
     @Test
     void rejectedOrderEchoesSubmittedQuantityAndLeavesTheBookUntouched() {
-        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.BUY, 10, -1.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.BUY, 10, -1));
 
         assertEquals(0, result.filledQuantity());
         assertEquals(10, result.remainingQuantity());
@@ -179,20 +175,20 @@ class ExecutionResultTest {
 
     @Test
     void duplicateIdOfRestingOrderIsRejectedAndFirstOrderStaysCancellable() {
-        LimitOrder first = new LimitOrder(7, Side.BUY, 10, 100.0);
+        LimitOrder first = new LimitOrder(7, Side.BUY, 10, 100);
         engine.processOrder(first);
 
-        ExecutionResult result = engine.processOrder(new LimitOrder(7, Side.BUY, 5, 101.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(7, Side.BUY, 5, 101));
 
         assertRejected(RejectReason.DUPLICATE_ID, result);
-        assertEquals(100.0, orderBook.getBestBid());          // second order never entered
+        assertEquals(100, orderBook.bestBid());          // second order never entered
         orderBook.cancelOrder(7);
         assertNull(orderBook.getBestBidOrder());
     }
 
     @Test
     void duplicateIdIsAlsoRejectedForOrdersThatWouldNeverRest() {
-        engine.processOrder(new LimitOrder(7, Side.SELL, 10, 100.0));
+        engine.processOrder(new LimitOrder(7, Side.SELL, 10, 100));
 
         assertRejected(RejectReason.DUPLICATE_ID,
                 engine.processOrder(new MarketOrder(7, Side.BUY, 10)));
@@ -201,10 +197,10 @@ class ExecutionResultTest {
 
     @Test
     void idOfAFilledOrderMayBeReused() {
-        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100.0));
+        engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100));
         engine.processOrder(new MarketOrder(2, Side.BUY, 5));      // order 1 is now gone
 
-        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100.0));
+        ExecutionResult result = engine.processOrder(new LimitOrder(1, Side.SELL, 5, 100));
 
         assertEquals(OrderStatus.RESTING, result.status());
     }
