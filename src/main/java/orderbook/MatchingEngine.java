@@ -56,9 +56,8 @@ public class MatchingEngine {
             return ExecutionResult.rejected(submittedQuantity, rejectReason);
         }
 
-        if(order.isLimitOrder() && order.getTimeInForce() == TimeInForce.FOK){
-            LimitOrder limitOrder = (LimitOrder) order;
-            if(!orderFillable(limitOrder)){
+        if(order.getTimeInForce().requiresFullFill()){
+            if(!orderFillable(order)){
                 return new ExecutionResult(OrderStatus.CANCELLED, 0, submittedQuantity, List.of(), null);
             }
         }
@@ -88,6 +87,7 @@ public class MatchingEngine {
     private RejectReason validate(Order order){
         if(order.getSide() == null) return RejectReason.INVALID_SIDE;
         if(order.getTimeInForce() == null) return RejectReason.MISSING_TIME_IN_FORCE;
+        if(order.isMarketOrder() && order.getTimeInForce().restsRemainder()) return RejectReason.INVALID_TIME_IN_FORCE;
         if(order.getQuantity() <= 0) return RejectReason.INVALID_QUANTITY;
 
         if(order.isLimitOrder()){
@@ -135,14 +135,14 @@ public class MatchingEngine {
     }
 
     private boolean restRemainder(Order order){
-        if(order.isLimitOrder() && order.getQuantity() > 0 && order.getTimeInForce() == TimeInForce.GTC){
+        if(order.isLimitOrder() && order.getQuantity() > 0 && order.getTimeInForce().restsRemainder()){
             orderBook.addOrder((LimitOrder) order);
             return true;
         }
         return false;
     }
 
-    private boolean orderFillable(LimitOrder order){
+    private boolean orderFillable(Order order){
         if(order.getSide() == Side.BUY){
             return orderBook.canBuyOrderFill(order);
         }else{

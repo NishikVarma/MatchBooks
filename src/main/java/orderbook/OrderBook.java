@@ -115,11 +115,11 @@ public class OrderBook {
         orderIndex.remove(id);
     }
 
-    boolean canBuyOrderFill(LimitOrder incomingOrder){
+    boolean canBuyOrderFill(Order incomingOrder){
         int totalQuantity = 0;
 
         for(Map.Entry<Double, Queue<LimitOrder>> entry : askOffers.entrySet()){
-            if(entry.getKey() > incomingOrder.getPrice()) break;
+            if(incomingOrder.isLimitOrder() && entry.getKey() > ((LimitOrder) incomingOrder).getPrice()) break;
             for(LimitOrder limitOrder : entry.getValue()){
                 totalQuantity += limitOrder.getQuantity();
 
@@ -132,11 +132,11 @@ public class OrderBook {
         return false;
     }
 
-    boolean canSellOrderFill(LimitOrder incomingOrder){
+    boolean canSellOrderFill(Order incomingOrder){
         int totalQuantity = 0;
 
         for(Map.Entry<Double, Queue<LimitOrder>> entry : bidOffers.entrySet()){
-            if(entry.getKey() < incomingOrder.getPrice()) break;
+            if(incomingOrder.isLimitOrder() && entry.getKey() < ((LimitOrder) incomingOrder).getPrice()) break;
             for(LimitOrder limitOrder : entry.getValue()){
                 totalQuantity += limitOrder.getQuantity();
 
