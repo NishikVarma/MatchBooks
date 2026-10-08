@@ -29,6 +29,10 @@ public class OrderBook {
         book.get(price).offer(order);
     }
 
+    boolean hasOrder(long id){
+        return orderIndex.containsKey(id);
+    }
+
     public double getBestBid(){
         return bidOffers.isEmpty() ? 0.0 : bidOffers.firstKey();
     }
