@@ -111,6 +111,40 @@ public class OrderBook {
         orderIndex.remove(id);
     }
 
+    boolean canBuyOrderFill(LimitOrder incomingOrder){
+        int totalQuantity = 0;
+
+        for(Map.Entry<Double, Queue<LimitOrder>> entry : askOffers.entrySet()){
+            if(entry.getKey() > incomingOrder.getPrice()) break;
+            for(LimitOrder limitOrder : entry.getValue()){
+                totalQuantity += limitOrder.getQuantity();
+
+                if(totalQuantity >= incomingOrder.getQuantity()){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    boolean canSellOrderFill(LimitOrder incomingOrder){
+        int totalQuantity = 0;
+
+        for(Map.Entry<Double, Queue<LimitOrder>> entry : bidOffers.entrySet()){
+            if(entry.getKey() < incomingOrder.getPrice()) break;
+            for(LimitOrder limitOrder : entry.getValue()){
+                totalQuantity += limitOrder.getQuantity();
+
+                if(totalQuantity >= incomingOrder.getQuantity()){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     void recordTrade(Trade trade){
         trades.add(trade);
     }

@@ -44,6 +44,11 @@ public class MatchingEngine {
     }
 
     public void processOrder(Order order) {
+        if(order.isLimitOrder() && order.getTimeInForce() == TimeInForce.FOK){
+            LimitOrder limitOrder = (LimitOrder) order;
+            if(!orderFillable(limitOrder)) return;
+        }
+
         if (order.getSide() == Side.BUY) {
             processBuyOrder(order);
         } else {
@@ -64,8 +69,10 @@ public class MatchingEngine {
         }
 
         if(incomingOrder.isLimitOrder() && incomingOrder.getQuantity() > 0){
-            LimitOrder limitOrder = (LimitOrder) incomingOrder;
-            orderBook.addOrder(limitOrder);
+            if(incomingOrder.getTimeInForce() == TimeInForce.GTC){
+                LimitOrder limitOrder = (LimitOrder) incomingOrder;
+                orderBook.addOrder(limitOrder);
+            }
         }
     }
 
@@ -82,8 +89,18 @@ public class MatchingEngine {
         }
 
         if(incomingOrder.isLimitOrder() && incomingOrder.getQuantity() > 0){
-            LimitOrder limitOrder = (LimitOrder) incomingOrder;
-            orderBook.addOrder(limitOrder);
+            if(incomingOrder.getTimeInForce() == TimeInForce.GTC){
+                LimitOrder limitOrder = (LimitOrder) incomingOrder;
+                orderBook.addOrder(limitOrder);
+            }
+        }
+    }
+
+    private boolean orderFillable(LimitOrder order){
+        if(order.getSide() == Side.BUY){
+            return orderBook.canBuyOrderFill(order);
+        }else{
+            return orderBook.canSellOrderFill(order);
         }
     }
 }

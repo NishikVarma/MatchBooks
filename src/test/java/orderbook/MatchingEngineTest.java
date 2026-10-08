@@ -230,4 +230,81 @@ public class MatchingEngineTest {
         assertEquals(30, orderBook.getBestAskOrder().getQuantity());
         assertEquals(102.0, orderBook.getBestAsk());
     }
+
+    @Test
+    void testIOCPairialFill() {
+        OrderBook orderBook = new OrderBook();
+        MatchingEngine engine = new MatchingEngine(orderBook);
+
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
+        engine.processOrder(new LimitOrder(2, Side.BUY, 50, 100.0, TimeInForce.IOC));
+
+        assertEquals(1, orderBook.getTrades().size());
+        assertEquals(20, orderBook.getTrades().get(0).getQuantity());
+
+        assertEquals(0.0, orderBook.getBestBid());
+        assertNull(orderBook.getBestBidOrder());
+        assertEquals(0.0, orderBook.getBestAsk());
+    }
+
+    @Test
+    void testFOKFullFill() {
+        OrderBook orderBook = new OrderBook();
+        MatchingEngine engine = new MatchingEngine(orderBook);
+
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 30, 101.0));
+
+        engine.processOrder(
+                new LimitOrder(3, Side.BUY, 50, 101.0, TimeInForce.FOK)
+        );
+
+        assertEquals(2, orderBook.getTrades().size());
+
+        assertEquals(20, orderBook.getTrades().get(0).getQuantity());
+        assertEquals(100.0, orderBook.getTrades().get(0).getPrice());
+
+        assertEquals(30, orderBook.getTrades().get(1).getQuantity());
+        assertEquals(101.0, orderBook.getTrades().get(1).getPrice());
+
+        assertNull(orderBook.getBestAskOrder());
+    }
+
+    @Test
+    void testFOKCannotFill() {
+        OrderBook orderBook = new OrderBook();
+        MatchingEngine engine = new MatchingEngine(orderBook);
+
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
+
+        engine.processOrder(
+                new LimitOrder(2, Side.BUY, 50, 100.0, TimeInForce.FOK)
+        );
+
+        assertTrue(orderBook.getTrades().isEmpty());
+
+        assertNotNull(orderBook.getBestAskOrder());
+        assertEquals(20, orderBook.getBestAskOrder().getQuantity());
+        assertEquals(100.0, orderBook.getBestAsk());
+    }
+
+    @Test
+    void testFOKRespectsLimitPrice() {
+        OrderBook orderBook = new OrderBook();
+        MatchingEngine engine = new MatchingEngine(orderBook);
+
+        engine.processOrder(new LimitOrder(1, Side.SELL, 20, 100.0));
+        engine.processOrder(new LimitOrder(2, Side.SELL, 30, 102.0));
+
+        engine.processOrder(
+                new LimitOrder(3, Side.BUY, 50, 101.0, TimeInForce.FOK)
+        );
+
+        assertTrue(orderBook.getTrades().isEmpty());
+
+        assertEquals(20, orderBook.getBestAskOrder().getQuantity());
+        assertEquals(100.0, orderBook.getBestAsk());
+    }
+
+
 }

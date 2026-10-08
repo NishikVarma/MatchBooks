@@ -6,12 +6,18 @@ public abstract class Order {
     private final Side side;
     private int quantity;
     private final OrderType orderType;
+    private final TimeInForce timeInForce;
 
-    public Order(long id, Side side, int quantity, OrderType orderType) {
+    public Order(long id, Side side, int quantity, OrderType orderType, TimeInForce timeInForce) {
         this.id = id;
         this.side = side;
         this.quantity = quantity;
         this.orderType = orderType;
+        this.timeInForce = timeInForce;
+    }
+
+    public TimeInForce getTimeInForce() {
+        return timeInForce;
     }
 
     public long getId() {
