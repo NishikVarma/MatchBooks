@@ -1,4 +1,5 @@
 package orderbook;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,8 +8,16 @@ import java.util.Objects;
 public class MatchingEngine {
     private final OrderBook orderBook;
 
+    private final Clock clock;
+
     public MatchingEngine(OrderBook orderBook){
+        this(orderBook, Clock.systemUTC());
+    }
+
+    /** @param clock source of trade timestamps (ADR-0034) */
+    public MatchingEngine(OrderBook orderBook, Clock clock){
         this.orderBook = orderBook;
+        this.clock = clock;
     }
 
     Trade executeMatch(Order incomingOrder, LimitOrder existingOrder) {
@@ -21,7 +30,7 @@ public class MatchingEngine {
         incomingOrder.reduceQuantity(tradeQuantity);
         orderBook.reduceResting(existingOrder, tradeQuantity);
 
-        final Instant timestamp = Instant.now();
+        final Instant timestamp = clock.instant();
 
         if (incomingOrder.getSide() == Side.BUY) {
 
@@ -35,10 +44,12 @@ public class MatchingEngine {
         }
 
         return new Trade(
+                orderBook.nextTradeId(),
                 existingOrder.getPrice(),
                 tradeQuantity,
                 buyOrderId,
                 sellOrderId,
+                incomingOrder.getSide(),
                 timestamp
         );
     }

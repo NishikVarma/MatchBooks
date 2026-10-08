@@ -8,6 +8,7 @@ public class OrderBook {
     private final Map<Long, LimitOrder> orderIndex = new HashMap<>();
     private final List<Trade> trades = new ArrayList<>();
     private final PriceScale priceScale;
+    private long lastTradeId;
 
     public OrderBook(){
         this(PriceScale.TICKS);
@@ -89,6 +90,24 @@ public class OrderBook {
 
     public LimitOrder getBestAskOrder(){
         return asks.bestOrder();
+    }
+
+    long nextTradeId(){
+        return ++lastTradeId;
+    }
+
+    /** Copy of the best {@code maxLevels} levels on each side, best price first (ADR-0033). */
+    public DepthSnapshot depth(int maxLevels){
+        return new DepthSnapshot(summarise(bids, maxLevels), summarise(asks, maxLevels));
+    }
+
+    private static List<LevelView> summarise(BookSide side, int maxLevels){
+        List<LevelView> views = new ArrayList<>();
+        for(PriceLevel level : side.levels()){
+            if(views.size() == maxLevels) break;
+            views.add(new LevelView(level.price(), level.totalQuantity(), level.orderCount()));
+        }
+        return views;
     }
 
     void recordTrade(Trade trade){
