@@ -123,7 +123,7 @@ public class OrderBook {
     private void printSide(BookSide side){
         for(PriceLevel level : side.levels()){
             for(LimitOrder order = level.head(); order != null; order = order.next){
-                System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + level.price());
+                System.out.println(order.getSide() + "|\t" + order.getQuantity() + "|\t" + priceScale.format(level.price()));
             }
         }
     }
